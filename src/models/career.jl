@@ -155,5 +155,23 @@ function get_greedy(cp::CareerWorkerProblem, v::Array)
     bellman_operator(cp, v, ret_policy=true)
 end
 
-# Initial condition for CareerWorkerProblem. See lecture for details
+# ---------------------------------- #
+# Abstract(Model|Solution) interface #
+# ---------------------------------- #
+
+"""
+Initial guess for value function in `CareerWorkerProblem`
+
+See [lecture](http://quant-econ.net/jl/career.html) for more details
+
+##### Arguments
+
+- `m::CareerWorkerProblem` : Instance of `CareerWorkerProblem`
+
+##### Returns
+
+- `v::Matrix` : initial guess for the value function on `m.theta`, `m.epsilon`
+grid
+
+"""
 init_values(m::CareerWorkerProblem) = fill(100.0, m.N, m.N)

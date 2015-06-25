@@ -239,7 +239,24 @@ function res_wage_operator(sp::SearchProblem, phi::Vector)
     return out
 end
 
-# Initial condition for SearchProblem. See lecture for details
+# ---------------------------------- #
+# Abstract(Model|Solution) interface #
+# ---------------------------------- #
+
+"""
+Initial guess for value function in `SearchProblem`
+
+See [lecture](http://quant-econ.net/jl/odu.html) for more details
+
+##### Arguments
+
+- `sp::SearchProblem` : Instance of `SearchProblem`
+
+##### Returns
+
+- `v::Vector` : initial guess for the value function on grid for `pi`
+
+"""
 init_values(m::SearchProblem) = ones(m.n_pi)
 
 # Special solve function for SearchProblem b/c it doesn't implement

@@ -255,7 +255,7 @@ $(____greedy_main_docstring).
 
 ##### Arguments
 
-- `cp::CareerWorkerProblem` : Instance of `CareerWorkerProblem`
+- `jv::JvWorker` : Instance of `JvWorker`
 - `v::Vector`: Current guess for the value function
 - `out::Tuple(Vector, Vector)` : Storage for output of policy rule
 
@@ -273,5 +273,22 @@ function get_greedy(jv::JvWorker, V::Vector; brute_force=true)
     bellman_operator(jv, V, ret_policies=true)
 end
 
-# Initial condition for JvWorker. See lecture for details
-init_values(m::JvWorker) = collect(m.x_grid * 0.5)
+# ---------------------------------- #
+# Abstract(Model|Solution) interface #
+# ---------------------------------- #
+
+"""
+Initial guess for value function in `JvWorker`
+
+See [lecture](http://quant-econ.net/jl/jv.html) for more details
+
+##### Arguments
+
+- `jv::JvWorker` : Instance of `JvWorker`
+
+##### Returns
+
+- `v::Vector` : initial guess for the value function on `jv.x_grid`
+
+"""
+init_values(jv::JvWorker) = collect(jv.x_grid * 0.5)

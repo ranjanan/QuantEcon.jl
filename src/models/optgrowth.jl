@@ -130,5 +130,23 @@ end
 
 get_greedy(g::GrowthModel, w::Vector) = bellman_operator(g, w, ret_policy=true)
 
-# Initial condition for GrowthModel. See lecture for details
+
+# ---------------------------------- #
+# Abstract(Model|Solution) interface #
+# ---------------------------------- #
+
+"""
+Initial guess for value function in `SearchProblem`
+
+See [lecture](http://quant-econ.net/jl/odu.html) for more details
+
+##### Arguments
+
+- `g::GrowthModel` : Instance of `GrowthModel`
+
+##### Returns
+
+- `v::Vector` : initial guess for the value function on `g.grid`
+
+"""
 init_values(g::GrowthModel) = 5 .* g.u(collect(g.grid)) .- 25

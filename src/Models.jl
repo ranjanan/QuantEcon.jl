@@ -10,23 +10,13 @@ using Optim: optimize
 using Grid: CoordInterpGrid, BCnan, BCnearest, InterpLinear
 
 abstract AbstractModel
+abstract AbstractSolution
 
-"""
-Generic function to solve model via value function iteration.
 
-For this function to work the model must have implemented the following:
-
-* `init_values(m::T)`, where `T <: AbstractModel` is the model's type
-* `bellman_operator(m::T, a::S)`, where `S` is the type returned from
-   init_values
-"""
-
-function solve_vf(m::AbstractModel; kwargs...)
+function solve_vf{TM<:AbstractModel}(m::TM; kwargs...)
     # make sure init_values is defined. If not provide a decent error message
-    T_model = typeof(m)
-    if !method_exists(init_values, (T_model,))
-        e = "init_values(m::$(T_model) must be defined to use default solver"
-        error(e)
+    if !method_exists(init_values, (TM,))
+        error("init_values(m::$(TM) must be defined to use default solver")
     end
     init = init_values(m)
 
@@ -34,13 +24,12 @@ function solve_vf(m::AbstractModel; kwargs...)
     solve_vf(m, init; kwargs...)
 end
 
-function solve_vf(m::AbstractModel, init; kwargs...)
+
+function solve_vf{TM<:AbstractModel, TI}(m::TM, init::TI; kwargs...)
     # make sure bellman_operator is defined
 
-    T_model = typeof(m)
-    T_init = typeof(init)
-    if !method_exists(bellman_operator, (T_model, typeof(init)))
-        e = "bellman_operator(m::$(T_model), x::$(T_init))"
+    if !method_exists(bellman_operator, (TM, TI))
+        e = "bellman_operator(m::$(TM), x::$(TI))"
         e *= " must be defined to use default solver"
         error(e)
     end
@@ -50,10 +39,11 @@ function solve_vf(m::AbstractModel, init; kwargs...)
     compute_fixed_point(f, init; kwargs...)
 end
 
-solve_pf(m::AbstractModel; kwargs...) = get_greedy(m, solve_vf(m; kwargs...))
-function solve_pf(m::AbstractModel, init; kwargs...)
-    get_greedy(m, init, solve_vf(m, init; kwargs...))
-end
+solve_pf{TM<:AbstractModel}(m::TM; kwargs...) =
+    get_greedy(m, solve_vf(m; kwargs...))
+
+solve_pf{TM<:AbstractModel}(m::TM, init; kwargs...) =
+    get_greedy(m, solve_vf(m, init; kwargs...))
 
 function solve_both(m::AbstractModel; kwargs...)
     vf = solve_vf(m; kwargs...)
@@ -115,6 +105,8 @@ include("models/odu.jl")
 include("models/optgrowth.jl")
 
 
+## Document generic functions
+
 """
 $(____bellman_main_docstring). $(____see_methods_docstring)
 """
@@ -138,6 +130,28 @@ $(____greedy_main_docstring). $(____see_methods_docstring)
 $(____mutate_last_positional_docstring)
 """
 get_greedy!
+
+"""
+Compute initial starting values for solution routines.
+$(____see_methods_docstring)
+"""
+init_values
+
+"""
+Generic function to solve model via value function iteration.
+For this function to work the model must have implemented the following:
+* `init_values(m::T)`, where `T <: AbstractModel` is the model's type
+* `bellman_operator(m::T, a::S)`, where `S` is the type returned from
+   init_values
+"""
+:solve
+
+function solve{TM<:AbstractModel}(m::TM; kwargs...)
+    TS = symbol(string(TM, "Solution"))
+    eval(quote
+        $TS($m; $kwargs...)
+    end)
+end
 
 
 end  # module

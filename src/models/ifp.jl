@@ -168,11 +168,10 @@ end
 """
 The approximate Coleman operator.
 
-Iteration with this operator corresponds to policy function
-iteration. Computes and returns the updated consumption policy
-c.  The array c is replaced with a function cf that implements
-univariate linear interpolation over the asset grid for each
-possible value of z.
+Iteration with this operator corresponds to policy function iteration. Computes
+and returns the updated consumption policy c.  The array c is replaced with a
+function cf that implements univariate linear interpolation over the asset grid
+for each possible value of z.
 
 ##### Arguments
 
@@ -234,6 +233,27 @@ function coleman_operator(cp::ConsumerProblem, c::Matrix)
 end
 
 
+# ---------------------------------- #
+# Abstract(Model|Solution) interface #
+# ---------------------------------- #
+
+"""
+Initial guess for value function in `JvWorker`
+
+See [lecture](http://quant-econ.net/jl/ifp.html) for more details
+
+##### Arguments
+
+- `cp::CareerWorkerProblem` : Instance of `CareerWorkerProblem`
+
+##### Returns
+
+- `V::Matrix` : initial guess for the value function on `cp.asset_grid` and
+`cp.z_vals`
+- `c::Matrix` : initial guess for the policy rule function on `cp.asset_grid`
+and `cp.z_vals`
+
+"""
 function init_values(cp::ConsumerProblem)
     # simplify names, set up arrays
     R, bet, u, b = cp.R, cp.bet, cp.u, cp.b
@@ -253,9 +273,19 @@ function init_values(cp::ConsumerProblem)
     return V, c
 end
 
-# Special solve function for ConsumerProblem to use more efficient
-# coleman_operator
 function solve_vf(m::ConsumerProblem, init=init_values(m)[2]; kwargs...)
     f(x) = coleman_operator(m, x)
     compute_fixed_point(f, init; kwargs...)
+end
+
+immutable ConsumerProblemSolution{T<:Number} <: AbstractSolution
+    value_function::Matrix{T}
+    policy_function::Matrix{T}
+    model::ConsumerProblem
+end
+
+function ConsumerProblemSolution(m::ConsumerProblem; kwargs...)
+    vf = solve_vf(m; kwargs...)
+    pf = get_greedy(m, vf)
+    ConsumerProblemSolution(vf, pf, m)
 end
