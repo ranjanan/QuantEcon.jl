@@ -212,6 +212,7 @@ function bellman_operator!(jv::JvWorker, V::Vector,
             for s in search_grid
                 for phi in search_grid
                     if s + phi <= 1.0
+                        cur_val = -w((s, phi))
                     else
                         cur_val = -1.0
                     end

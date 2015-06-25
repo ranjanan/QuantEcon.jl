@@ -159,16 +159,17 @@ end
 
 function _f_runs(m::AbstractModel, f::Function)
     try
-        solve_vf(m, err_tol=Inf, verbose=false)
+        f(m; err_tol=Inf, verbose=false)
         return true
     catch
         return false
     end
 end
 
-solve_vf_runs(m::AbstractModel) = _f_runs(m, solve_vf)
-solve_pf_runs(m::AbstractModel) = _f_runs(m, solve_vf)
+vfi_runs(m::AbstractModel) = _f_runs(m, vfi)
+solve_pf_runs(m::AbstractModel) = _f_runs(m, vfi)
 solve_both_runs(m::AbstractModel) = _f_runs(m, solve_both)
+solve_runs(m::AbstractModel) = _f_runs(m, solve)
 
 facts("Testing asset_pricing.jl") do
     n = 5
@@ -216,8 +217,9 @@ facts("Testing asset_pricing.jl") do
         @fact length(w_bars) => 2
     end
 
-    context("Test solve_(vf|pf|both) doesn't run") do
-        @fact solve_vf_runs(ap) => false
+    context("Test solve_(vf|pf|both) and solve don't run") do
+        @fact solve_runs(ap) => false
+        @fact vfi_runs(ap) => false
         @fact solve_pf_runs(ap) => false
         @fact solve_both_runs(ap) => false
     end
@@ -249,8 +251,9 @@ facts("Testing career.jl") do
         end
     end
 
-    context("Test solve_(vf|pf|both) runs") do
-        @fact solve_vf_runs(cp) => true
+    context("Test solve_(vf|pf|both) and solve run") do
+        @fact solve_runs(cp) => true
+        @fact vfi_runs(cp) => true
         @fact solve_pf_runs(cp) => true
         @fact solve_both_runs(cp) => true
     end
@@ -296,8 +299,9 @@ facts("Testing ifp.jl") do
     @fact size(v_init) => shapes
     @fact size(c_init) => shapes
 
-    context("Test solve_(vf|pf|both) runs") do
-        @fact solve_vf_runs(cp) => true
+    context("Test solve_(vf|pf|both) and solve run") do
+        @fact solve_runs(cp) => true
+        @fact vfi_runs(cp) => true
         @fact solve_pf_runs(cp) => true
         @fact solve_both_runs(cp) => true
     end
@@ -350,8 +354,9 @@ facts("Testing jv.jl") do
     # solution to bellman is fixed point
     @fact v_star => roughly(bellman_operator(jv, v_star); atol=1e-6)
 
-    context("Test solve_(vf|pf|both) runs") do
-        @fact solve_vf_runs(jv) => true
+    context("Test solve_(vf|pf|both) and solve run") do
+        @fact solve_runs(jv) => true
+        @fact vfi_runs(jv) => true
         @fact solve_pf_runs(jv) => true
         @fact solve_both_runs(jv) => true
     end
@@ -406,7 +411,8 @@ facts("Testing lucastree.jl") do
     end
 
     context("Test solve_(vf|pf|both) doesn't run") do
-        @fact solve_vf_runs(lt) => false
+        @fact solve_runs(lt) => false
+        @fact vfi_runs(lt) => false
         @fact solve_pf_runs(lt) => false
         @fact solve_both_runs(lt) => false
     end
@@ -481,11 +487,13 @@ facts("Testing odu.jl") do
 
     end
 
-    context("Test solve_(vf|pf|both) runs") do
-        @fact solve_vf_runs(sp) => true
+    context("Test solve, solve_pf, vfi, solve_both run") do
+        @fact solve_runs(sp) => true
         @fact solve_pf_runs(sp) => true
+        @fact vfi_runs(sp) => true
         @fact solve_both_runs(sp) => true
     end
+
 end  # facts
 
 facts("Testing optgrowth.jl") do
@@ -536,8 +544,9 @@ facts("Testing optgrowth.jl") do
         @fact out => roughly(v_star)
     end
 
-    context("Test solve_(vf|pf|both) runs") do
-        @fact solve_vf_runs(gm) => true
+    context("Test solve_(vf|pf|both) and solve run") do
+        @fact solve_runs(gm) => true
+        @fact vfi_runs(gm) => true
         @fact solve_pf_runs(gm) => true
         @fact solve_both_runs(gm) => true
     end

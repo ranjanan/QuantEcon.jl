@@ -266,6 +266,10 @@ function solve_pf(m::SearchProblem, init=init_values(m); kwargs...)
     compute_fixed_point(f, init; kwargs...)
 end
 
+vfi(m::SearchProblem, init=fill(m.c/(1-m.bet), m.n_pi, m.n_w); kwargs...) =
+    compute_fixed_point(x->bellman_operator(m, x), init; kwargs...)
+
+
 immutable SearchProblemSolution{T<:Number} <: AbstractSolution
     value_function::Matrix{T}
     policy_function::Matrix{Bool}

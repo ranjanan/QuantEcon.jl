@@ -25,7 +25,7 @@ export
     compute_lt_price, lucas_operator,                 # lucastree
     res_wage_operator, res_wage_operator!,            # odu
     bellman_operator, bellman_operator!,              # many
-    vfi, solve_pf, solve_both                    # many
+    vfi, solve_pf, solve_both, solve                  # many
 
 ____bellman_main_docstring = """
 Apply the Bellman operator for a given model and initial value
