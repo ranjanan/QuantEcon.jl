@@ -150,3 +150,14 @@ See [lecture](http://quant-econ.net/jl/odu.html) for more details
 
 """
 init_values(g::GrowthModel) = 5 .* g.u(collect(g.grid)) .- 25
+
+immutable GrowthModelSolution{T<:Number} <: AbstractSolution
+    value_function::Vector{T}
+    policy_function::Vector{T}
+    model::GrowthModel
+end
+
+solution_type(::GrowthModel) = GrowthModelSolution
+
+GrowthModelSolution(m::GrowthModel; kwargs...) =
+    GrowthModelSolution(solve_both(m; kwargs...)..., m)

@@ -175,3 +175,14 @@ grid
 
 """
 init_values(m::CareerWorkerProblem) = fill(100.0, m.N, m.N)
+
+immutable CareerWorkerProblemSolution{T<:Number} <: AbstractSolution
+    value_function::Matrix{T}
+    policy_function::Matrix{T}
+    model::CareerWorkerProblem
+end
+
+solution_type(::CareerWorkerProblem) = CareerWorkerProblemSolution
+
+CareerWorkerProblemSolution(m::CareerWorkerProblem; kwargs...) =
+    CareerWorkerProblemSolution(solve_both(m; kwargs...)..., m)

@@ -179,7 +179,7 @@ function bellman_operator!(jv::JvWorker, V::Vector,
         c3(z) = z[2] - epsilon
         guess = (0.2, 0.2)
         constraints = [@compat Dict("type" => "ineq", "fun"=> i) for i in [c1, c2, c3]]
-        if typeof(out) <: Tuple
+        if isa(out, Tuple)
             msg = "Multiple output arrays given. There is only one value"
             msg = " function.\nDid you mean to pass ret_policies=true?"
             error(msg)
@@ -196,7 +196,6 @@ function bellman_operator!(jv::JvWorker, V::Vector,
         search_grid = linspace(epsilon, 1.0, 15)
     end
 
-
     for (i, x) in enumerate(jv.x_grid)
 
         function w(z)
@@ -208,11 +207,11 @@ function bellman_operator!(jv::JvWorker, V::Vector,
             return - x * (1.0 - phi - s) - bet * q
         end
 
+        # TODO: do I know this will be monotonic? If so I can do binary search
         if brute_force
             for s in search_grid
                 for phi in search_grid
                     if s + phi <= 1.0
-                        cur_val = -w((s, phi))
                     else
                         cur_val = -1.0
                     end
@@ -269,9 +268,8 @@ function get_greedy!(jv::JvWorker, V::Vector, out::@compat Tuple{Vector, Vector}
     bellman_operator!(jv, V, out, ret_policies=true)
 end
 
-function get_greedy(jv::JvWorker, V::Vector; brute_force=true)
+get_greedy(jv::JvWorker, V::Vector; brute_force=true) =
     bellman_operator(jv, V, ret_policies=true)
-end
 
 # ---------------------------------- #
 # Abstract(Model|Solution) interface #
@@ -292,3 +290,19 @@ See [lecture](http://quant-econ.net/jl/jv.html) for more details
 
 """
 init_values(jv::JvWorker) = collect(jv.x_grid * 0.5)
+
+
+immutable JvWorkerSolution{T<:Number} <: AbstractSolution
+    value_function::Vector{T}
+    s_policy::Vector{T}
+    phi_policy::Vector{T}
+    model::JvWorker
+end
+
+solution_type(::JvWorker) = JvWorkerSolution
+
+function JvWorkerSolution(m::JvWorker; kwargs...)
+    vf = vfi(m; kwargs...)
+    s_pol, phi_pol = get_greedy(m, vf)
+    JvWorkerSolution(vf, s_pol, phi_pol, m)
+end

@@ -273,7 +273,7 @@ function init_values(cp::ConsumerProblem)
     return V, c
 end
 
-function solve_vf(m::ConsumerProblem, init=init_values(m)[2]; kwargs...)
+function vfi(m::ConsumerProblem, init=init_values(m)[2]; kwargs...)
     f(x) = coleman_operator(m, x)
     compute_fixed_point(f, init; kwargs...)
 end
@@ -284,8 +284,7 @@ immutable ConsumerProblemSolution{T<:Number} <: AbstractSolution
     model::ConsumerProblem
 end
 
-function ConsumerProblemSolution(m::ConsumerProblem; kwargs...)
-    vf = solve_vf(m; kwargs...)
-    pf = get_greedy(m, vf)
-    ConsumerProblemSolution(vf, pf, m)
-end
+solution_type(::ConsumerProblem) = ConsumerProblemSolution
+
+ConsumerProblemSolution(m::ConsumerProblem; kwargs...) =
+    ConsumerProblemSolution(solve_both(m; kwargs...)..., m)

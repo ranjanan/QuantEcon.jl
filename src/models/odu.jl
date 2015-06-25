@@ -259,9 +259,26 @@ See [lecture](http://quant-econ.net/jl/odu.html) for more details
 """
 init_values(m::SearchProblem) = ones(m.n_pi)
 
-# Special solve function for SearchProblem b/c it doesn't implement
-# bellman_operator
-function solve_vf(m::SearchProblem, init=init_values(m); kwargs...)
+# Special solve function for SearchProblem iterating on policy is more
+# efficient than iterating on the
+function solve_pf(m::SearchProblem, init=init_values(m); kwargs...)
     f(x) = res_wage_operator(m, x)
     compute_fixed_point(f, init; kwargs...)
+end
+
+immutable SearchProblemSolution{T<:Number} <: AbstractSolution
+    value_function::Matrix{T}
+    policy_function::Matrix{Bool}
+    res_wage_function::Vector{T}
+    model::SearchProblem
+end
+
+solution_type(::SearchProblem) = SearchProblemSolution
+
+function SearchProblemSolution(sp::SearchProblem; kwargs...)
+    init_vf = fill(sp.c/(1 - sp.bet), sp.n_pi, sp.n_w)
+    vf = compute_fixed_point(x->bellman_operator(sp, x), init_vf; kwargs...)
+    pf = get_greedy(sp, vf)
+    res_wage = solve_pf(sp)
+    SearchProblemSolution(vf, pf, res_wage, sp)
 end
