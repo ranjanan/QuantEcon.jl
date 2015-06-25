@@ -91,7 +91,7 @@ function set_up_data(lt::LucasTree)
     if exists(f, "lt/prices")
         prices = read(f, "lt/prices")
     else
-        prices = compute_lt_price(lt, err_tol=1e-4, max_iter=1000)
+        prices = compute_lt_price(lt, err_tol=1e-12, max_iter=10000)
         write(f, "lt/prices", prices)
     end
 
@@ -254,20 +254,41 @@ facts("Testing career.jl") do
         @fact solve_pf_runs(cp) => true
         @fact solve_both_runs(cp) => true
     end
+
+    context("test mutating functions") do
+        # new array to update inplace in bellman_operator! and get_greedy!
+        out = copy(v_init)
+        get_greedy!(cp, v_init, out)
+        @fact out => roughly(greedy)
+
+        # now test bellman_operator!
+        bellman_operator!(cp, v_init, out)
+        @fact out => roughly(v_prime)
+    end
 end  # facts
 
 facts("Testing ifp.jl") do
     cp = ConsumerProblem()
     v_star, c_star_vfi, c_star = set_up_data(cp)
 
-    # test bellman and coleman policies agree
-    @fact Base.maxabs(c_star_vfi - c_star) <= 0.2 => true
+    context("test bellman and coleman policies agree") do
+        @fact Base.maxabs(c_star_vfi - c_star) <= 0.2 => true
+    end
 
-    # test bellman solution is fixed point
-    @fact v_star => roughly(bellman_operator(cp, v_star); atol=1e-6)
+    context("test bellman solution is fixed point") do
+        @fact v_star => roughly(bellman_operator(cp, v_star); atol=1e-6)
+    end
 
-    # test coleman solution is fixed point
-    @fact c_star => roughly(coleman_operator(cp, c_star); atol=1e-6)
+    context("test coleman solution is fixed point") do
+        @fact c_star => roughly(coleman_operator(cp, c_star); atol=1e-6)
+    end
+
+    context("test shape of init_values") do
+        v_init, c_init = init_values(cp)
+        shapes = (length(cp.asset_grid), length(cp.z_vals))
+        @fact size(v_init) => shapes
+        @fact size(c_init) => shapes
+    end
 
     # test shape of init_values
     v_init, c_init = init_values(cp)
@@ -279,6 +300,21 @@ facts("Testing ifp.jl") do
         @fact solve_vf_runs(cp) => true
         @fact solve_pf_runs(cp) => true
         @fact solve_both_runs(cp) => true
+    end
+
+    context("test mutating functions") do
+        # new array to update inplace in bellman_operator! and get_greedy!
+        out = copy(v_star)
+        get_greedy!(cp, v_star, out)
+        @fact out => roughly(c_star_vfi)
+
+        # now test bellman_operator!
+        bellman_operator!(cp, v_star, out)
+        @fact out => roughly(v_star)
+
+        # now test coleman_operator!
+        coleman_operator!(cp, c_star, out)
+        @fact out => roughly(c_star; atol=1e-6)
     end
 end  # facts
 
@@ -292,17 +328,24 @@ facts("Testing jv.jl") do
     v_star, s_star, phi_star = set_up_data(jv)
     n = length(jv.x_grid)
 
-    # s preferred to phi with low x?
-    # low x is an early index
-    @fact s_star[1] > phi_star[1] => true
+    context("test model intuition") do
+        # s preferred to phi with low x?
+        # low x is an early index
+        @fact s_star[1] > phi_star[1] => true
 
-    # phi preferred to s with high x?
-    # high x is a late index
-    @fact phi_star[end] >  s_star[end] => true
+        # phi preferred to s with high x?
+        # high x is a late index
+        @fact phi_star[end] >  s_star[end] => true
+    end
 
-    # policies correct size
-    @fact length(s_star) => n
-    @fact length(phi_star) => n
+    context("policies correct size") do
+        @fact length(s_star) => n
+        @fact length(phi_star) => n
+    end
+
+    context("solution to bellman is fixed point") do
+        @fact v_star => roughly(bellman_operator(jv, v_star); atol=1e-6)
+    end
 
     # solution to bellman is fixed point
     @fact v_star => roughly(bellman_operator(jv, v_star); atol=1e-6)
@@ -311,6 +354,19 @@ facts("Testing jv.jl") do
         @fact solve_vf_runs(jv) => true
         @fact solve_pf_runs(jv) => true
         @fact solve_both_runs(jv) => true
+    end
+
+    context("test mutating functions") do
+        # new array to update inplace in bellman_operator! and get_greedy!
+        out1 = copy(v_star)
+        out2 = copy(v_star)
+        get_greedy!(jv, v_star, (out1, out2))
+        @fact out1 => roughly(s_star)
+        @fact out2 => roughly(phi_star)
+
+        # now test bellman_operator!
+        bellman_operator!(jv, v_star, out1)
+        @fact out1 => roughly(v_star)
     end
 end  # facts
 
@@ -324,7 +380,7 @@ facts("Testing lucastree.jl") do
     lt = LucasTree(γ, β, α, σ)
     prices = set_up_data(lt)
 
-    @fact size(prices) => size([lt.grid])
+    @fact size(prices) => size(lt.grid)
 
     context("test integrate") do
         g(x) = x .* 0.0 + 1.0
@@ -338,7 +394,7 @@ facts("Testing lucastree.jl") do
     end
 
     context("test lucas_operator fp") do
-        old_f = prices ./ ([lt.grid].^γ)
+        old_f = prices ./ (lt.grid.^γ)
         new_f = lucas_operator(lt, old_f)
         new_p = new_f .* lt.grid.^γ
 
@@ -372,8 +428,9 @@ facts("Testing odu.jl") do
 
     v_star, phi_vfi, phi_pfi = set_up_data(sp)
 
-    # tests shapes of vfi outputs
-    @fact size(v_star) => size(phi_vfi)
+    context("tests shapes of vfi outputs") do
+        @fact size(v_star) => size(phi_vfi)
+    end
 
     context("phi_vfi increasing?") do
         phi_vfi_sorted = true
@@ -395,14 +452,34 @@ facts("Testing odu.jl") do
         @fact v_star_sorted => true
     end
 
-    # phi_pfi increasing?
-    @fact issorted(phi_pfi, rev=true) => true
+    context("test model intuition") do
+        # phi_pfi increasing?
+        @fact issorted(phi_pfi, rev=true) => true
 
-    # v_star fixed_point?
-    @fact v_star => roughly(bellman_operator(sp, v_star); atol=1e-5)
+        # v_star fixed_point?
+        @fact v_star => roughly(bellman_operator(sp, v_star); atol=1e-5)
+    end
 
-    # phi_pfi fixed_point?
-    @fact phi_pfi => roughly(res_wage_operator(sp, phi_pfi); atol=1e-5)
+    context("phi_pfi fixed_point?") do
+        @fact phi_pfi => roughly(res_wage_operator(sp, phi_pfi); atol=1e-5)
+    end
+
+    context("test mutating functions") do
+        # new array to update inplace in bellman_operator! and get_greedy!
+        out = copy(v_star)
+        get_greedy!(sp, v_star, out)
+        @fact out => roughly(phi_vfi)
+
+        # now test bellman_operator!
+        bellman_operator!(sp, v_star, out)
+        @fact out => roughly(v_star)
+
+        # now test res_wage_operator!
+        out2 = copy(phi_pfi)
+        res_wage_operator!(sp, phi_pfi, out2)
+        @fact out2 => roughly(phi_pfi)
+
+    end
 
     context("Test solve_(vf|pf|both) runs") do
         @fact solve_vf_runs(sp) => true
@@ -426,7 +503,7 @@ facts("Testing optgrowth.jl") do
     sigma = get_greedy(gm, v_star)
 
     # compute true policy rule
-    true_sigma = (1 - α*β) .* [gm.grid].^α
+    true_sigma = (1 - α*β) .* gm.grid.^α
 
     # compute true value function
     ab = α * β
@@ -434,16 +511,30 @@ facts("Testing optgrowth.jl") do
     c2 = α / (1 - ab)
     true_v_star(k) = c1 + c2.*log(k)
 
-    # test computed/analytical policies are close
-    @fact sigma => roughly(true_sigma; atol=1e-2)
+    context("test computed/analytical policies are close") do
+        @fact sigma => roughly(true_sigma; atol=1e-2)
+    end
 
-    # test computed/analytical values are close. Note first point is garbage
-    # b/c of interp
-    @fact v_star[2:end] => roughly(true_v_star(gm.grid)[2:end]; atol=5e-2)
+    context("test computed/analytical values are close") do
+        # Note first point is garbage b/c of interp
+        @fact v_star[2:end] => roughly(true_v_star(gm.grid)[2:end]; atol=5e-2)
+    end
 
-    # test v_star fixed point.
-    @fact v_star[2:end] => roughly(bellman_operator(gm, v_star)[2:end];
-                                   atol=5e-2)
+    context("test v_star fixed point.") do
+        @fact v_star[2:end] => roughly(bellman_operator(gm, v_star)[2:end];
+                                       atol=5e-2)
+    end
+
+    context("test mutating functions") do
+        # new array to update inplace in bellman_operator! and get_greedy!
+        out = copy(v_star)
+        get_greedy!(gm, v_star, out)
+        @fact out => roughly(sigma)
+
+        # now test bellman_operator!
+        bellman_operator!(gm, v_star, out)
+        @fact out => roughly(v_star)
+    end
 
     context("Test solve_(vf|pf|both) runs") do
         @fact solve_vf_runs(gm) => true
@@ -454,4 +545,3 @@ end  # facts
 
 
 end  # module
-
