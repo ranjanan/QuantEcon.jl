@@ -219,7 +219,7 @@ function qnwnorm(n::Int)
     weights ./= sqrt(pi)
     nodes *= sqrt(2)
 
-    nodes = ndims(nodes) == 2 && size(nodes, 2) == 1 ? squeeze(nodes, 2): nodes
+    nodes = ndims(nodes) == 2 && size(nodes, 2) == 1 ? squeeze(nodes, 2) : nodes
 
     return nodes, weights
 end
